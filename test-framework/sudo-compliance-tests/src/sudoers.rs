@@ -1,3 +1,4 @@
+use pretty_assertions::assert_eq;
 use sudo_test::{Command, Env, TextFile, User};
 
 use crate::{Result, PASSWORD, SUDOERS_ROOT_ALL_NOPASSWD, USERNAME};
@@ -71,7 +72,6 @@ fn cannot_sudo_if_sudoers_file_is_not_owned_by_root() -> Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[test]
 fn user_specifications_evaluated_bottom_to_top() -> Result<()> {
     let env = Env(format!(
@@ -82,20 +82,19 @@ fn user_specifications_evaluated_bottom_to_top() -> Result<()> {
     .build()?;
 
     let output = Command::new("sudo")
-        .args(["-S", "true"])
+        .arg("true")
         .as_user(USERNAME)
         .exec(&env)?;
     assert!(!output.status().success());
     assert_eq!(Some(1), output.status().code());
 
     if sudo_test::is_original_sudo() {
-        assert_contains!(output.stderr(), "no password was provided");
+        assert_contains!(output.stderr(), "no tty present");
     }
 
-    Command::new("sudo")
-        .args(["-S", "true"])
+    Command::new("sshpass")
+        .args(["-p", PASSWORD, "sudo", "true"])
         .as_user(USERNAME)
-        .stdin(PASSWORD)
         .exec(&env)?
         .assert_success()
 }
