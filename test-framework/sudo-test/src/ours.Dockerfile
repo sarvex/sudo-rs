@@ -1,6 +1,9 @@
 FROM rust:1-slim-buster
+# we use sshpass to test password authentication via TTY emulation
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends clang libclang-dev libpam0g-dev
+    apt-get install -y --no-install-recommends \
+    clang libclang-dev libpam0g-dev \
+    sshpass
 # cache the crates.io index in the image for faster local testing
 RUN cargo search sudo
 WORKDIR /usr/src/sudo
