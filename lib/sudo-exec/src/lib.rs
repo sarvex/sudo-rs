@@ -46,6 +46,7 @@ pub fn run_command(ctx: Context, env: Environment) -> io::Result<ExitStatus> {
         }
     }
     // set target user and groups
+    #[cfg(not(test))]
     set_target_user(&mut command, ctx.target_user, ctx.target_group);
     // spawn and exec to command
     let mut child = command.spawn()?;
@@ -138,4 +139,52 @@ fn is_self_terminating(process: Option<Process>, child_pid: i32, sudo_pid: i32) 
     }
 
     false
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn default_ctx(simple_command: &str, simple_arg: Option<&str>) -> Context {
+        let options = sudo_cli::SudoOptions::try_parse_from(["sudo", simple_command]).unwrap();
+        let context = Context::build_from_options(options, String::new()).unwrap();
+        let command = sudo_common::CommandAndArguments {
+            arguments: simple_arg.map(|x| vec![x.to_string()]).unwrap_or_default(),
+            ..context.command
+        };
+        Context { command, ..context }
+    }
+
+    #[test]
+    fn test_simple_exec() {
+        assert!(
+            !run_command(default_ctx("/bin/false", None), Environment::new())
+                .unwrap()
+                .success()
+        );
+        assert!(
+            run_command(default_ctx("/bin/true", None), Environment::new())
+                .unwrap()
+                .success()
+        );
+        assert!(
+            run_command(default_ctx("/bin/sleep", Some("0.333")), Environment::new())
+                .unwrap()
+                .success()
+        );
+        assert_eq!(
+            run_command(default_ctx("/root/something", None), Environment::new())
+                .unwrap_err()
+                .raw_os_error()
+                .unwrap(),
+            13
+        );
+        assert_eq!(
+            run_command(default_ctx("/DOES/NOT/EXIST", None), Environment::new())
+                .unwrap_err()
+                .raw_os_error()
+                .unwrap(),
+            2
+        );
+    }
 }
