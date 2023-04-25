@@ -31,9 +31,13 @@ fn chatty_check_permission(
     println!(
         "OUTCOME: {}",
         match result.authorization() {
-            Authorization::Passed => "NOPASSWD",
+            Authorization::Allowed {
+                must_authenticate: false,
+            } => "NOPASSWD",
             Authorization::Forbidden => "<not allowed>",
-            Authorization::Required => "PASSWD",
+            Authorization::Allowed {
+                must_authenticate: true,
+            } => "PASSWD",
         }
     );
 }
